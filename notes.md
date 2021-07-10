@@ -348,4 +348,167 @@ fromIntegral :: (Integral a, Num b) => a -> b
 
 #### Chapter 3 - Syntax in functions
 
+Pattern matching is used to specify patterns to which some data should conform
+and to deconstruct the data according to those patterns
+
+```haskell
+sayMe :: Int -> String
+sayMe 1 = "One!"
+sayMe 2 = "Two!"
+sayMe 3 = "Three!"
+sayMe 4 = "Four!"
+sayMe 5 = "Five!"
+sayMe x = "Not between 1 and 5"
+```
+
+The pattern matching is done by checking for each pattern as it was defined.  If
+we put the last line second, this function would constantly output `"Not between 1 and 5"`, as no other pattern will be found.
+
+Another clean example:
+```haskell
+factorial :: Integral -> Integral
+factorial 0 = 1
+factorial n = n * factorial (n-1)
+```
+
+You can 'unpack' tuples like in JavaScript using pattern matching
+```haskell
+addVectors :: (Double, Double) -> (Double, Double) -> (Double, Double)
+addVectors (x1, y1) (x2, y2) = (x1+x2, y1+y2)
+```
+
+You can use `_` to denote a generic variable. This can be useful when in a 
+function, you only need some specific part of a tuple. For example:
+```haskell
+third :: (a, b, c) -> a
+third (_, _, z) = z
+```
+This can also be used in list comprehensions
+```haskell
+[ a + b | (a,b) <- pairs ]
+```
+
+You can also match with lists, remembering that `[1,2,3]` is just syntactic 
+sugar for `1:2:3:[]`
+```haskell
+head' :: [a] -> a
+head' (x:_) = x
+```
+
+**If we want to bind something to several values, we must use `()` so that 
+haskell can correctly parse them**
+
+```haskell
+tell :: (Show a) => [a] -> String
+tell [] = "The list is empty"
+tell (x:[]) = "The list has one element:" ++ show x
+tell (x:y:[]) = "The list has two elements: " ++ show x ++ " and " ++ show y
+tell (x:y:_) = "The list is too long. The first two elements are: " 
+                ++ show x ++ " and " ++ show y
+```
+
+We can use as-patterns to break up an item while keeping a reference to the 
+entire original item
+```haskell
+firstLetter :: String -> String
+firstLetter "" = "Empty string, whoops!"
+firstLetter text@(x:_) = "The first letter of " ++ text ++ " is " ++ [x]
+```
+
+#### Guards
+
+A guard is indicated by a `|`, and it can be used to pattern match with 
+predicates. It basically works as an if statement
+```haskell
+bmiTell :: Double -> String
+bmiTell bm
+	| bmi <= 18.5 = "You're underweight, eat more!"
+	| bmi <= 25.0 = "Looking good!"
+	| bmi <= 30.0 = "You're overweight. Let's work out together!"
+	| otherwise = "You're obese. Go see a doctor!"
+```
+Guard must be indented by at least one space
+
+The `otherwise` keyword functions as a catch-all. It can be substituted by a 
+`True` and the effects would stay the same.
+
+#### `where`
+We can add a `where` keyword after the guard to declare "local variables", to 
+avoid calculating a certain value multiple times
+```haskell
+bmiTell :: Double -> Double -> String
+bmiTell weight height
+	| bmi <= skinny = "You're underweight, eat more!"
+	| bmi <= normal = "Looking good!"
+	| bmi <= fat    = "You're overweight. Let's work out together!"
+	| otherwise     = "You're obese. Go see a doctor!"
+	where bmi = weight / height^2
+		  skinny = 18.5
+		  normal = 25.0
+		  fat = 30.0
+```
+
+You can pattern match in the `where` clause
+```haskell
+initials :: String -> String -> String
+initials firstname lastname = [f] ++ ". " ++ [l] ++ "."
+	where (f:_) = firstname
+		  (l:_) = lastname
+```
+
+Functions can also be defined in `where` blocks
+
+#### `let`
+
+The `let` expressions take the form of `let <bindings> in <expression>`
+```haskell
+cylinder_area :: Double -> Double -> Double
+cylinder_area r h = 
+	let sideArea = 2 * pi * r * h
+		topArea = pi * r^2
+	in  sideArea + 2 * topArea
+```
+The difference between the `let` expressions and `where` blocks are that `let`
+expressions are expressions, which means that they can be used outside of a 
+function definition.
+
+However, they also can't be used across guards (where the `where` clause is used
+instead)
+
+We can use a `let` expression (without the `in` part) inside a list 
+comprehension, as if it where a predicate, to create bindings inside the list 
+comprehension
+```haskell
+calcBmis :: [(Double, Double)] -> [Double]
+calcBmis bmis = [bmi | (weight, height) <- bmis, let bmi = weight / height ^2 ]
+```
+
+#### `case`
+
+Basically, like a `switch` case on other languages
+```haskell
+case <expression> of <pattern> -> <result>
+                     <pattern> -> <result>
+                     <pattern> -> <result>
+					 ...
+```
+The first pattern that matches the expression is used
+```haskell
+describeList :: [a] -> String
+describeList ls = "This list is " ++ case ls of [] -> "empty"
+                                                [x] -> "a singleton list"
+                                                xs -> "a longer list"
+                                  ++ "."
+```
+
+> #### Note
+> This could also be achieved using pattern matching in a where clause
+> ```haskell
+> describeList :: [a] -> String
+> describeList ls = "The list is " ++ what ls ++ "."
+>     where what [] = "empty"
+>           what [x] = "a singleton list"
+>           what xs = "a longer list"
+> ```
+
 
