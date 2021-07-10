@@ -510,5 +510,54 @@ describeList ls = "This list is " ++ case ls of [] -> "empty"
 >           what [x] = "a singleton list"
 >           what xs = "a longer list"
 > ```
+`
 
+## Chapter 4 - Recursion
+```haskell
+maximum' :: (Ord a) => [a] -> a
+maximum' [] = error "maximum of empty list!"
+maximum' [a] = a
+maximum' (x:rest) = x `max` maximum' rest
+```
+```haskell
+replicate' :: Int -> a -> [a]
+replicate' 0 x = []
+replicate' n x = x:replicate (n-1) x
+```
+```haskell
+take' :: Int -> [a] -> [a]
+take' n ls
+    | n < 0          = error "n can't be negative"
+	| n > length ls  = error "n is too large" -- Se raya si ls es infinita
+	| n == 0         = []
+	| otherwise      = first:take' (n-1) rest
+	where (first:rest) = ls
+```
+```haskell
+reverse' :: [a] -> [a]
+reverse' [] = []
+reverse' (first:rest) = reverse' rest ++ first
+```
+```haskell
+repeat' :: a : [a]
+repeat' x = x:repeat' x
+```
+```haskell
+zip' :: [a] -> [b] -> [(a,b)]
+zip' [] _ = []
+zip' _ [] = []
+zip' (a:as) (b:bs) = (a,b):zip' as bs
+```
+```haskell
+elem' :: a -> [a] -> Bool
+elem' a [] = False
+alem' a (first:rest) = a == first || a `elem'` rest
+```
+```haskell
+quicksort' :: [a] -> [a]
+quicksort' [] = []
+quicksort' (pivot:rest) = quicksort' smallerOrEqual ++ pivot ++ quicksort' greater
+    where smallerOrEqual = [x | x <- rest, x <= pivot]
+	      greater        = [x | x <- rest, x >  pivot]
+```
 
