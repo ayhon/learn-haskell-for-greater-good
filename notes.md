@@ -561,3 +561,224 @@ quicksort' (pivot:rest) = quicksort' smallerOrEqual ++ pivot ++ quicksort' great
 	      greater        = [x | x <- rest, x >  pivot]
 ```
 
+## Chapter 4 - Higher-order functions
+
+Functions in haskell are curried. This means that they only take one argument,
+and return a function that takes the next argument and so on. This means that
+we can use these intermediate functions.
+```haskell
+function :: Int -> Int -> Int
+function x y = x + y
+function' = function 10
+```
+In this case, `function'` is a partially applied function of `function`
+
+Infix functions can also be partially applied by using _sections_ by surrounding
+it with parenthesis and then supplying the rest of the arguments
+```haskell
+Prelude> let div10 = (/10)
+Prelude> div10 200
+20.0
+Prelude> let twoHundredDiv = (200/)
+Prelude> twoHundredDiv 10
+20.0
+```
+The only gotcha with sections is if you want to use it with `-`. In that case,
+`(-4)` means negative 4. You can rewrite that with `substract`
+```haskell
+applyTwice :: (a->a) -> a -> a
+applyTwice f x = f (f x)
+```
+```haskell
+*Main> applyTwice (3/) 10
+10.0
+*Main> applyTwice (3:) [1]
+[3,3,1]
+```
+### The Functional Programmer's Toolbox
+`zipWith` is a function in the standard library which takes two lists and a
+function and applies said function to each pair of elements, and adds the 
+result to a list
+```haskell
+zipWith' :: (a -> b -> c) -> [a] -> [b] -> [c]
+zipWith' _ _ [] = []
+zipWith' _ [] _ = []
+zipWith' f (a:as) (b:bs) = (f a b):zipWith' as bs
+```
+`flip` takes a function with two arguments and returns a function that behaves
+the same as the provided one, but with it's arguments flipped.
+```haskell
+flip' :: (a -> b -> c) -> b -> a -> c
+flip' f x y = f y x
+```
+_This is a great example of how curried functions can be really useful in 
+haskell_
+
+`map` takes a function and a list and for each element applies the function to
+it and returns it finally as a list of results.
+```haskell
+map' :: (a -> b) -> [a] -> [b]
+map' _ [] = []
+map' f (x:xs) = f x : map' f xs
+```
+
+`filter` takes a predicate and a list and returns the subsequence of elements
+that follow the predicate
+```haskell
+filter' :: (a -> Bool) -> [a] -> [a]
+filter' _ [] = []
+-- filter' p (x:xs) = if p x then [x] else [] ++ filter' p xs
+filter' p (x:xs)
+    | p x       = x : filter' p xs
+    | otherwise = filter' p xs
+```
+> ### Example:
+> A Collatz sequence or chain is defined as follows:
+>  + Start with any natural number
+>  + If the number is 1, stop
+>  + If the number is even, divide it by 2
+>  + If the number is odd, multiply by 3 and add 1
+>  + Repeat the algorithm with the resulting number
+> 
+>  This is theorized to always terminate
+> 
+>  *For all starting numbers between 1 and 100, how many Collatz
+>  chains have a length greater than 15?*
+> 
+> ```haskell
+> length_collatz :: Int -> Int
+> length_collatz 1 = 1
+> -- length_collatz x
+>     -- | x `mod` 2 == 0 = length_collatz (x/2) + 1
+> 	-- | otherwise      = length_collatz (3*x+1) + 1
+> length_collatz x = 
+>     length_collatz (if x `mod`2 == 0 then (x/2) else (3*x + 1)) + 1
+> length [x | x <- [1..100], length_collatz x > 15]
+> ```
+`
+
+### Lambdas
+
+Lambdas are anonymous functions declared to be used once. Their syntax is
+```haskell
+\ args -> ret_expr
+```
+We use `\` because it _kinda_ looks like a lambda `λ`
+
+Usually we surround them in parenthesis
+
+### Folds
+
+They are a way to implement a function where you traverse all the items in a 
+function one by one and return something based on that. It works like the 
+function `std::accumulate` in C++.
+
+You can fold from the left (`foldl`) or right (`foldr`)
+```haskell
+foldl :: Foldable t => (b -> a -> b) -> b -> t a -> b
+foldl function accumulator list
+```
+A list is and instance of `Foldable`
+```haskell
+sum' :: Num n => [n] -> n
+sum' ls = foldl (+) 0 ls
+-- Viva Curry
+sum' = foldl (+) 0
+```
+###### _`foldlr`_:
+```haskell
+map' :: (a -> b) -> [a] -> [b]
+map' f = foldr (\x acc -> f x : acc) [] 
+```
+###### _`foldll`_:
+```haskell
+elem' :: a -> [a] -> Bool
+elem' a = foldl (\acc x -> a == x || acc) Fase
+```
+
+`foldl1` and `foldr1` are both like `foldl` and `foldr`, but assuming that the
+accumulator is the first or last element of the list respectively
+```haskell
+maximum' :: Ord a => [a] -> a
+maximum' = foldl1 max
+```
+#### Examples of standard library functions implemented with folds
+```haskell
+reverse' :: [a] -> [a]
+reverse' = foldl (\acc x -> x : acc) []
+-- reverse' = foldl (flip (:)) []
+```
+```haskell
+product' :: Num a => [a] -> a
+product' = foldl (*) 1
+```
+```haskell
+filter' :: (a -> Bool) -> [a] -> [a]
+filter' p = foldr (\acc x -> if p x then (x:acc) else acc) []
+```
+```haskell
+last' :: [a] -> a
+last' = foldr1 (\_ acc -> acc)
+last' = foldl1 (\_ x -> x)
+```
+Folds can be visualized as follows:
+ + `foldr f z [A,B,C,D]`  
+   ```
+   f A (f B (f C (f D z)))
+   ```
+ + `foldl g z [A,B,C,D]`  
+   ```
+   g (g (g (g z A) B) C) D
+   ```
+Both `foldr` (and `foldl`) will work on infinite lists when the binary function 
+that we are passing doesn't always need to evaluate the second parameter (The 
+accumulator) to give us some sort of answer
+
+`scanl` and `scanr` are like `foldl` and `foldr` but returning a list with the
+intermediate states instead of just the final element.
+```haskell
+sqrtSums :: Int
+sqrtSums = length (takeWhile (<1000) (scanl1 (+) (map sqrt [1..]))) + 1
+```
+
+### Function application 
+```haskell
+($) :: (a -> b) -> a -> b
+f $ x = f x
+```
+While ` ` is left associative function application, the `$` operator is right
+associative function application. Also, ` ` has the highest precedent, but `$`
+has the lowest.
+
+`$` can be used to get rid of parenthesis 
+```haskell
+-- sum (map sqrt [1..130])
+sum $ map sqrt [1..130]
+```
+Also, `$` let's us treat function application like any other operation
+```haskell
+map ($3) [ (4+), (10*), (^2), sqrt]
+```
+
+### Function composition
+```haskell
+(.) :: (b -> c) -> (a -> b) -> a -> c
+f . g = \x -> f (g x) = \x -> f $ g x
+```
+`.` is right associative function composition, so
+```
+f (g (h x)) == (f . g . h) x
+```
+This can be useful for chaining functions without using lambdas  
+`sum (replicate 5 (max 6.7 8.9))`→`(sum . replicate 5) max 6.7 8.9`→  
+→`sum . replicate 5 $ max 6.7 8.9`_(→`sum $ replicate 5 $ max 6.7 8.9`)_
+
+Also, this let's use write functions in _point-free style_ (Taking advantage of
+curried functions), like this:
+`fn x = ceiling (negate (tan (cos (max 50 x))))` → `fn x = ceiling . negate . 
+tan . cos . max 50`  
+This is usually more concise
+
+However, making long lists of composition is usually discouraged. Take this into
+account for complex functions. It's better to define intermediate functions in a
+`let` expression.
