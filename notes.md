@@ -895,3 +895,358 @@ After the where, we define our own functions
 We can also have hierarchical modules, where each module have submodules which
 can have submodules of their own. This is done with directories and 
 subdirectories, like in Java
+
+## Chapter 7 - Making our own types and type classes
+
+Create types using the `data`keyword
+```haskell
+data Bool = False | True
+```
+```haskell
+data Shape = Circle Float Float Float | Rectangle Float Float Float Float
+```
+The `Shpae` type has two constructors. The `Circle` constructor will take 3
+floats, and the `Rectangle` four
+```haskell
+Circle :: Float -> Float -> Float -> Shape
+Rectangle :: Float -> Float -> Float -> Float -> Shape
+```
+We can pattern match to constructors (As we did with `[]` or `True`)
+```haskell
+area :: Shape -> Float
+area (Circle _ _ r) = 2*pi*r
+area (Rectangle x1 y1 x2 y2) = (abs $ x1-x2) * (abs $ y1-y2)
+```
+We can make `Shape` be a part of the `Show` type class (For example), with the
+`deriving (TypeClass)` syntax, so the `Shape` type definition would be:
+```haskell
+data Shape = Circle Float Float Float | Rectangle Float Float Float Float
+    deriving (Show)
+```
+Since `Float Float` are used to represent a point, let's declare the point data
+type:
+```haskell
+data Point = Point Float Float deriving (Show)
+data Shape = Circle Point Float | Rectangle Point Point
+    deriving (Show)
+
+area :: Shape -> Float
+area (Circle _ r) = pi*r^2
+area (Rectangle (Point x1 y1) (Point x2 y2)) = (abs $ x1-x2) * (abs $ y1-y2)
+
+nudge :: Shape -> Float -> Float -> Shape
+nudge (Circle (Point x y) r) dx dy = Circle (Point (x+dx) (y+dy)) r
+nudge (Rectangle (Point x1 y1) (Point x2 y2)) dx dy 
+    = Rectangle (Point x1+dx y1+dy) (Point x2+dx y2+dy)
+
+baseCircle :: Float -> Shape
+baseCircle r = Circle (Point 0 0) r
+
+baseRect :: Float -> Shape
+baseRect h w = Rectangle (Point 0 0) (Point w h)
+```
+You can export types in a module, just include them as if they were a function, 
+and in parenthesis put the names of the constructors you are exporting. To 
+export all constructors, use the shorthand `(..)` instead of writing them all.
+We could export the type without exporting the constructors by leaving the 
+parenthesis empty.
+
+We can define a type the following two ways:
+```haskell
+--                   Name   Lastnm Age Height Tlf    Icecream flavor
+data Person = Person String String Int Float  String String
+    deriving (Show)
+
+data Person = Person { firstName :: String,
+                       lastName :: String,
+                       age :: Int,
+                       height :: Float,
+                       phoneNumber :: String,
+                       flavor :: String
+                       } deriving (Show)
+```
+
+With the last way, the functions `firstName`, `lastName` and so own are also
+automatically created
+```haskell
+firstName :: Person -> String
+```
+This is called the record syntax. When defined with the record syntax, the
+constructor changes to:
+```haskell
+Person {firstName = "A", lastName = "B", age = 1, height = 1.0,
+     phoneNumber = "A ", flavor = "A"}
+```
+We must name each field, but the order can be changed
+
+A character constructor can take some parameters (Type parameters)
+```haskell
+data Maybe a = Nothing | Just a
+```
+The equivalent of "casting" in haskell is done with `::`. `Just 3` by default
+is of type `Num a => Maybe a`, but we may want to be more specific, so using 
+`::` will make i behave as we want to
+```haskell                  
+Just 3 :: Maybe Int
+```                         
+A type is **concrete** if it doesn't take any parameters at all or if it takes
+type parameters and this have been all filled up (`Maybe Char`).
+
+`Nothing` is type of `Maybe a`, where `a` is a type variable. This means that
+`Nothing` can act as any `Maybe x` for any `x`. It's the same as the empty list,
+which is of type `[a]`.
+
+**In general, don't put type constraints (`(___ __) =>`) into data declarations**
+
+If a type derives the `Eq` type class, then it will test equality using the
+constructors of both expressions.
+
+You can derive any type whose internal fields are instances of `Eq`
+
+You can derive from `Show` any type, and it'll use its constructor as the 
+representation. The same is true (but opposite) for `Read`.
+
+You can call `read` on an instance of `Read`, and it'll return an object. 
+However, you must specify to read what that string must be read as (Or put it as
+part of an operation that makes sense, so that haskell can infer it from 
+context)
+```haskell
+read :: Read a => String -> a
+```
+```haskell
+read "Person { fistName=\"Michael\", lastName=\"Diamond\", age=43}" :: Person :: Person
+```
+When deriving from `Ord`, the earlier the constructor was in the beginning of 
+the expression, the higher order it gets. Values resulting from the same 
+parameters in the constructor are considered equal. If both values come from the
+same constructor, the internal fields are compared (So they must be instances of
+`Ord`)
+
+If the values of a type are all literals, they can be made instances of `Enum` 
+so they'll be usable with functions like `succ` and `pred`.
+```haskell
+data Day = Monday | Tuesday | Wednesday | Thursday | Friday | Saturday | Sunday
+    deriving (Eq, Ord, Show, Read, Enum, Bounded)
+```
+We could also make it part of `Bounded`
+
+### `type`
+
+You can define synonyms for a type with the expression
+```haskell
+type String = [Char]
+```
+_Like `using` in C++_
+
+```haskell
+type Name = String
+type PhoneNumber = String
+type AssocList k v = [(k,v)]
+type PhoneBook = AssocList Name PhoneNumber
+
+phoneBook :: PhoneBook
+phoneBook = [
+    ("betty", "555-2938"),
+    ("bonnie", "526-1989"),
+    ("patsy", "235-1560"),
+    ("lucille", "205-2928"),
+    ("wendy", "939-8282"),
+    ("penny", "853-2492")
+    ]
+
+inPhoneBook :: Name -> PhoneNumber -> PhoneBook -> Bool
+inPhoneBook name pnumber pbook = (name, pnumber) `elem` pbook
+```
+As you can see, they can also take type arguments
+
+We can use the `Either a b` class to distinguish between two possibilities. It's
+defined as follows
+```haskell
+data Either a = Left a | Right b
+    deriving (Eq, Ord, Show, Read)
+```
+This is usually used to get information about errors in a function. The `Left`
+is usually left for errors, while `Right` is used for the result
+```haskell
+-- A High School has lockers with a code combination. The students ask the 
+-- locker supervisor for an specific locker, and the supervisor will either 
+-- give them the combination of the locker they chose or ask them to take
+-- another locker
+
+import qualified Data.Map as Map
+
+data LockerState = Taken | Free
+    deriving (Show, Equ)
+
+type Code = String
+
+type LockerMap = Map.Map Int (LockerState, Code)
+
+
+lockerLookup :: Int -> LockerMap -> Either String Code
+lockerLookup  lockerNumber map = case Map.lookup lockerNumber map of
+    Nothing            -> Left $ "Locker" ++ show lockerNumber 
+                                 ++ " doesn't exist!"
+    Just (state, code) -> if state /= Taken 
+                            then Right code 
+                            else Left $ "Locker " ++ show lockerNumber 
+                                        ++ " is already taken!"
+
+lockers :: LockerMap
+lockers = Map.fromList 
+    [ (100, (Taken, "ZD39I"))
+    , (101, (Free, "JAH3I"))
+    , (103, (Free, "IQSA9"))
+    , (105, (Free, "Q0TSA"))
+    , (109, (Taken, "893JJ"))
+    , (110, (Taken, "99292"))
+    ]
+```
+We can make data types recursively (Like the list, `[1,2]` is just `1:2:[]`)
+```haskell
+data List a = Empty | Cons a (List a)
+     deriving (Eq, Ord, Show, Read)
+```
+Here, `Cons` is but another word for `:`.
+
+### Infix functions and fixity
+
+We can define functions to be automatically infix by naming them using only 
+special characters. We can do the same with constructors, although infix
+constructors must be surrounded by `:`.
+
+Also, we can use `infixr` and `infixl` to define the fixity of our function. It
+follows the next expression
+```haskell
+infixr 5 /\
+(/\) :: Num a => a -> a -> a
+x /\ y = max x y - min x y
+```
+```haskell
+infixr 5 :-:
+data List a = Empty | a :-: (List a)
+     deriving (Eq, Ord, Show, Read)
+
+list :: List Int
+list = 1 :-: 10 :-: 20 :-: Empty
+```
+
+After seeing al of this, it follows that pattern matching works on the form 
+(pattern) given by the constructors.
+
+### Defining type classes
+
+This is an example definition of the type class `Eq`, which requires that the
+operators `==` and `/=` are defined.
+```haskell
+class Eq a where
+    (==) :: a -> a -> Bool
+    (/=) :: a -> a -> Bool
+    x == y = not (x /= y)
+    x /= y = not (x == y)
+```
+This recursive definition will be useful
+
+We can define class instances by hand
+
+```haskell
+data TrafficLight = Read | Yellow | Green
+
+instance Eq TrafficLight where
+    Red == Red       = True
+    Green == Green   = True
+    Yellow == Yellow = True
+    _ == _           = False -- Default if checks fail
+```
+Because we defined `/=` in terms of `==` (And vice versa), we only need to 
+overwrite one of the two operators (In this case, `==`)
+
+You can make typeclasses depend on one another by using constraints
+```haskell
+class Eq a => Ord a where
+    ...
+```
+When defining instances manually, the `a` must be a concrete type, although for
+types like `Maybe x`, a type variable can be used
+
+To see what the instances of a type class are, just type `:info YourTypeClass`
+in `ghci`. This works for type constructors too (`:info Maybe`)
+
+> ### Example: The `Truthy` type class
+> In some weakly typed languages, almost any value can be interpreted as a 
+> boolean. We want this kind of feature in haskell, so let's implement it 
+> ourselves
+```haskell
+class Truthy a where
+    isTruthy :: a -> Bool
+
+instance Truthy Bool where
+    isTruthy = id -- identity function
+
+instance Truthy Int where
+    isTruthy 0 = False
+    isTruthy _ = True
+
+instance Truthy [a] where
+    isTruthy [] = False
+    isTruthy _ = True
+
+instance Truthy (Maybe a) where
+    isTruthy Nothing = False
+    isTruthy _ = True
+
+instance Truthy (Either a b) where
+    isTruthy (Left _) = False
+    isTruthy _ = True
+
+-- instance Truthy (Tree a) where
+--     isTruthy Empty = False
+--     isTruthy _ = True
+```
+### The `Functor` type class
+
+The `Functor` type class corresponds to things that can be mapped over.
+
+```haskell
+class Functor f where
+    fmap :: (a -> b) -> f a -> f b
+```
+`fmap` is the generic version of `map`, this last one only working for lists
+
+```haskell
+class Functor [] where
+    fmap = map
+```
+In this case, `[]` is the constructor, not the empty list.
+```haskell
+instance Functor Tree where
+    fmap _ Empty = Empty
+    fmap f (Tree root left right) = Tree (f root) (fmap f left) (fmap f right)
+```
+You can also use partial application to define as instances of `Functor` other 
+more interesting types
+```haskell
+instance Functor (Either a) where
+    fmap f (Right x) = Right (f x)
+    fmap f (Left x) = Left x
+```
+```haskell
+instance Functor (Data.Map.Map k) where
+    ...
+```
+The type of a type is called a **kind**. If the type of a value is a little label
+that we use to reason about the value, then the kinds are the labels we put over
+types.
+
+In `ghci`, kinds can be explored using `:k Type`
+```haskell
+Prelude> :k Int
+Int :: *
+```
+The `*` indicates that the type is a concrete type, a type that doesn't take any
+parameters
+```haskell
+Prelude> :k Maybe
+Maybe :: * -> *
+```
+Knowing this, an instance of `Functor` must be of the kind `* -> *`
