@@ -512,7 +512,7 @@ describeList ls = "This list is " ++ case ls of [] -> "empty"
 > ```
 `
 
-## Chapter 4 - Recursion
+## Chapter 5 - Recursion
 ```haskell
 maximum' :: (Ord a) => [a] -> a
 maximum' [] = error "maximum of empty list!"
@@ -782,3 +782,116 @@ This is usually more concise
 However, making long lists of composition is usually discouraged. Take this into
 account for complex functions. It's better to define intermediate functions in a
 `let` expression.
+
+## Chapter 6 - Modules
+
+A haskell module is a file that defines some functions, types and type classes.  
+A haskell program is a collection of modules
+
+The haskell standard library is separated in many different modules. One such 
+module is `Prelude`, which is where all the functions we've used up until now 
+are defined.
+
+To import a module, use `import Module` in a script, or `:m + Module1 Module2`
+in `ghci`.
+
+You can import specific functions from a module with `import Module (func1, 
+func2)`
+
+You cand also hide specific functions from a module by doing `import Module hiding (func1, func2)`
+
+A qualified import makes mandatory to prepend the module name, which helps in 
+avoiding name clashes. Use `import qualified Module` to do this.
+
+Some module names are stupidly long, so use `import Module as M` to be able to
+refer to it only by `M`.
+
+The difference between `.` for referencing a function from a module and `.` for
+function composition are the white-space that must go in between
+
+### Exercises
+
+```haskell
+countWords :: String -> [(String, Int)]
+countWords = map (\ls@(x:_) -> (x,length ls)) . group . sort . words
+```
+```haskell
+isIn :: Eq a => a -> [a] -> Bool
+isIn elem = any (elem `isPrefixOf`) . tails
+```
+```haskell
+ccypher :: String -> Int -> String
+-- ccypher msg n =  map chr . map (+n) $ map ord msg
+ccypher n = map (\c -> chr $ ord c + n) 
+```
+```haskell
+
+```
+### `Data.List`
+
+ + `nub` Filters a list for unique numbers
+ + `words` Given a sentence, return a list of the words in that sentence
+ + `group` Given a list, returns a list of grouped elements (Grouped if they are
+ equal)  
+   ```haskell
+   [1,1,1,1,1,1,2,2,2,2,3,3,3,3,4,6,9] → [[1,1,1,1,1,1],[2,2,2,2],[3,3,3,3],[4],[6],[9]]
+   ```
+ + `sort` Given a list of things that can be ordered and orders them
+ + `isPrefixOf` Self-explanatory
+ + `tails` Returns a list with the tails called from every position in the list
+ + `foldl'` A strict version of `foldl`, which doesn't postpone computations
+ + `find` Given a list and a condition, returns the first element which follows
+ that condition. It's signature is:
+   ```haskell
+   find :: (a -> Bool) -> [a] -> Maybe a
+   ```
+   where the `Maybe` type can have either 0 or 1 element (Like a bounded list).  
+   When there is only one element, it's of the type `Just elem`. If there is 
+   none, the value is `Nothing`
+ + `lookup` Given a key and a a list of pairs of keys and values (association 
+ list), returns the value associated with the first key found (linearly)
+
+### `Data.Map`
+<!-- It has a filter function as well -->
+ + `fromList` Creates a map from an association list
+   ```haskell
+   fromList :: (Ord k) => [(k, v)] -> Data.Map.Map k v
+   ```
+ + `fromListWith` Creates a map from an association list and a function, which is
+ used to decide what to do with duplicate keys
+   ```haskell
+   fromListWith :: (Ord k) => [(k, v)] -> (v -> v -> v) -> Data.Map.Map k v
+   ```
+ + `lookup` Given a key and a Map, returns its value (Or Nothing)
+ + `insert` Given a key, a value and a Map with such keys and values, inserts 
+ the new pair in the Map
+ + `size` Given a map, returns its size (Number of keys)
+ + `map` Given a function and a map, apply that function to every value of the
+ map
+
+### `Data.Char`
+
+ + `ord` Given a character, returns its ASCII position
+ + `chr` Given a number, returns the character with its that in ASCII
+ + `digitToInt` Transforms a number into its corresponding character 
+ representation
+
+### Making our own modules
+
+You make your own module following the following syntax
+
+```haskell
+module ModuleName
+( exportedFunction1
+, exportedFunction2
+, exportedFunction3
+, exportedFunction4
+, exportedFunction5
+) where
+```
+
+After the where, we define our own functions
+
+We can also have hierarchical modules, where each module have submodules which
+can have submodules of their own. This is done with directories and 
+subdirectories, like in Java
