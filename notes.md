@@ -60,6 +60,10 @@ fields: `if`, `then` and `else`.
 ```haskell
 doubleSmallNumber = if x > 100 then x else x*2
 ```
+The operator priority for the `if` expression is pretty low. This means that all
+parts of an expression that are not required by other functions will be absoved
+by the `if`, `then` or `else` parts.
+
 ### Lists
 Lists are **homogeneous** in haskell. They store several elements of the same
 type.
@@ -1250,3 +1254,172 @@ Prelude> :k Maybe
 Maybe :: * -> *
 ```
 Knowing this, an instance of `Functor` must be of the kind `* -> *`
+
+## Chapter 8 - Input and Output
+
+To compile a haskell program (Named `FileName.hs`) use the following command on
+the same directory
+```bash
+ghc --make FileName
+```
+Usign `FileName.hs` also works
+
+```haskell
+Prelude> :t putStrLn
+putStrLn :: String -> IO ()
+Prelude> :t putStrLn "Hello world"
+putStrLn "Hello world" :: IO ()
+```
+This is read as: the type of `putStrLn` is a function that takes a `String` and 
+returns a `IO` action that has a result type of `()` (The empty tuple, also 
+known as _unit_)
+
+An `IO` action is something that when performed will carry out an action with a
+side effect and will also present some result (yields this result).
+
+An `IO` action will be performed when we give it a name of `main` and then run 
+our program
+
+We can glue several `IO` actions into one using the `do` syntax.
+```haskell
+main = do
+    putStrLn "Hello, What's your name?"
+	name <- getLine
+	putStrLn ("Hey " ++ name ++ ", you rock!")
+```
+`getLine` is a `IO` action that yields a string. The `<-` is an operator that
+means "perform the action `<rhs>` and bind the result to `<lhs>`".
+```haskell
+getLine :: IO String
+```
+We could also bind with `<-` the answer of `putStrLn`, altough this would be a
+`()`, but we can only do this with the first one. A `do` block doesn't allow 
+binding the last action.
+
+Inside a `do` block, we can use the `let` syntax to bind pure values to names
+```haskell
+reverseWords :: String -> String
+reverseWords = unwords . map reverse . words
+
+main = do
+       line <- getLine
+	   if (null line)
+	       then return ()
+		   else do
+		       putStrLn $ reverseWords line
+			   main
+```
+The `return` function makes a `IO` action out of a pure value. It basically 
+boxes the value.
+```haskell
+return :: Monal m => a -> m a
+```
+In our previous program, we use return to give an `IO` action that won't be 
+actually performed. It's an instruction with no effect.
+
+We could store the value in combination with `<-`.
+```haskell
+a <- return "hello"
+```
+We could say that `<-` and `return` are opposites
+
+### Useful I/O functions
+ * `putStr`
+   ```haskell
+   putStr :: String -> IO ()
+   ```
+   Takes a `String` and returns an action that will print it to the terminal, 
+   without a newline `\n` at the end 
+
+ * `putStrLn`
+   ```haskell
+   putStrLn :: String -> IO ()
+   ```
+   Takes a `String` and returns an action that will print it to the terminal, 
+   with a newline `\n` at the end 
+
+ * `putChar`
+   ```haskell
+   putChar :: Char -> IO ()
+   ```
+   Takes a `Char` and returns an action that will print it to the terminal
+
+ * `print`
+   ```haskell
+   print :: Show a => a -> IO ()
+   ```
+   Takes an instance of `Show` and returns an action that will print it's 
+   representation to the terminal, with a newline `\n` at the end 
+
+ * `when` From `Control.Monad`
+   ```haskell
+   when :: Applicative f => Bool -> f () -> f ()
+   ```
+   Takes a `Bool` and a `IO` action, and if the first parameter is true, it 
+   returns the provided `IO` action, else it returns an empty `IO`  
+   _This function actually goes beyond IO_
+   ```haskell
+   -- EXAMPLE
+   main = do
+       input <- getLine
+	   when (input == "SWORDFISH") $ do
+	       putStrLn input
+   ```
+
+ * `sequence`
+   ```haskell
+   sequence :: (Traversable t, Monad m) => t (m a) -> m (t a)
+   ```
+   Takes a list of `IO` actions and returns a `IO` action that will perform
+   those actions one after the other. The result that this action yields will be
+   a list of the results of all the `IO` actions that were performed.
+   ```haskell
+   -- EXAMPLE
+   sequence $ map print [1,2,3,4,5]
+   ```
+ * `mapM`
+   ```haskell
+   mapM :: (Traversable t, Monad m) => (a -> m b) -> t a -> m (t b)
+   ```
+   Takes a function that returns `IO` actions over the elements of a list and 
+   the list, and returns an action of the sequence of said elements. It's 
+   basically the composition of `sequence` and `map`  
+   `mapM` is the same, but discarding the results later (Returns the equivalent
+   of `return ()`)  
+   _This function actually goes beyond IO_
+
+ * `forever` From `Control.Monad`
+    ```haskell
+    forever :: Applicative f => f a -> f b
+	```
+	Takes an `IO` action and returns an `IO` action that repeats the `IO` action
+	forever
+	```haskell
+	-- EXAMPLE
+	main = forever $ do
+	    putStr "Give me some input: "
+		l <- getLine
+		putStrLn $ map toUpper l
+	```
+
+ * `forM` 
+   ```haskell
+   forM :: (Traversable t, Monad m) => t a -> (a -> m b) -> m (t b)
+   ```
+   Like `mapM` but with its arguments flipped. This can sometimes be useful.
+   ```haskell
+	-- EXAMPLE
+	main = do
+	    colors <- forM [1,2,3,4] (\a -> do
+		    putStrLn $ "Which color do you associate with the number " 
+			    ++ show a ++ "?"
+		    color <- getLine
+			return color)
+		putStrLn "The colors that you associate with 1, 2, 3 and 4 are: "
+		mapM putStrLn colors
+   ```
+
+To sum up, `IO` actions are types like any other in haskell, where the only 
+particularity is that when they are inside the `main` function they are 
+performed. These actions can also give you back information they got from the
+real world.
