@@ -1423,3 +1423,237 @@ To sum up, `IO` actions are types like any other in haskell, where the only
 particularity is that when they are inside the `main` function they are 
 performed. These actions can also give you back information they got from the
 real world.
+
+## Chapter 9 - More I/O
+
+`getContents` reads everything from the input at once (Until it encouters an EOF
+or similar). Its type is `IO String`, however the interesting thing is that it 
+does lazy IO.
+
+`interact` takes a function that transforms strings and returns an `IO` action
+that will take some input, pass it to the given function and output its result.
+
+`openFile` takes a `FilePath` (Actually just a `String`) and an `IOMode` and 
+returns an `IO` action that will open the file and return the `Handle` 
+corresponding to it.  
+This function is in the module `System.IO`
+```haskell
+type FilePath = String
+type IOMode = ReadMode | WriteMode | AppendMode | ReadWriteMode
+```
+`hGetContents` takes a `Handle` and returns an `IO String`. Like `getContents`,
+but without defaulting to `stdin`. As `getContents`, `hGetContents` is lazy.
+
+`hClose` takes a `Handle` and retunrs an `IO` action that closes the file.
+
+`withFile` takes a `FilePath` (`String`), an `IOMode` and a function, which 
+takes a `Handle` and returns an `IO` action, and returns the previous `IO` 
+action.
+
+A generalization of said function can be found in `Control.Exception`, called
+`bracket`.
+```haskell
+bracket :: IO a -> (a -> IO b) -> (a -> IO c) -> IO c
+```
+`bracket` takes an `IO` action that acquires a resource (Like a file handle), 
+a function that releases that resource, and a function that takes such resource
+and returns an `IO` action that does something with it, and executes said 
+function, returning its result but also closing the resource
+```haskell
+withFile name mode f = bracket (openFile name mode) hClose f
+-- Not tested, but better than proposed solution
+```
+
+`hPutStr`, `hPutStrLn` and `hGetChar` do what you'd expect, operating with
+handles. 
+
+`readFile` takes a `FilePath` and returns an `IO` action that gives the contents
+of the file as a string
+
+`writeFile` takes a `FilePath` and a `String` and returns an `IO` action that
+writes (or overwrites) a file with the `String` in `FilePath`.
+
+`appendFile` takes a `FilePath` and a `String` and appends the `String` to the
+end of the file in `FilePath` (If it doesn't exist, it creates it).
+
+> ### Example
+> A program to delete a line from a "todo.txt" file
+> ```haskell
+> import System.IO
+> import System.Directory
+> import Data.List
+> 
+> main = do
+>     contents <- readFile "todo.txt"
+>     let todoTasks = lines contents
+>         numberedTasks = zipWIth (\n line -> show n ++ " - " ++line) 
+>                                 [0..] todoTasks
+>     putStrLn "These are your TODO items:"
+>     mapM_ putStrLn numberedTasks
+>     putStrLn "Which one do you want to delete?"
+>     numberString <- getLine
+>     let number = read numberString
+>         newTodoItems = unlines $ delete (todoTasks !! number) todoTasks
+>         (tempName, tempHandle) <- openTempFile "." "temp"
+>         hPutStr tempHandle newTodoItems
+>         hClose tempHandle
+>         removeFile "todo.txt"
+>         renameFile tempName "todo.txt"
+> ```
+> `
+
+`openTempFile` takes a directory and a name (`FilePath` and `String`) and 
+creates a temporary file using that name in the directory, returning an `IO`
+action that gives its name and handle in a tuple. Found in `System.IO`.
+
+`removeFile` and `renameFile`are self-explanatory, both of which take a 
+`FilePath` as its target argument.
+
+To ensure a correct handling of errors, we can use the function `bracketOnError`
+from `Control.Exception`, which behaves like `bracket`, but only closes de 
+resource in case it encounters an error.
+
+### Command-line arguments
+
+`getArgs` is an `IO` action that returns a list of `String`s, the arguments
+the program was called with
+
+`getProgName` is an `IO` action that returns a `String`, the name of the program
+
+```haskell
+import System.Environment
+import System.Directory
+import System.IO
+import Control.Exception
+import Data.List
+
+dispatch :: String -> [String] -> IO ()
+dispatch "add" = add
+dispatch "view" = view
+dispatch "remove" = remove
+dispatch cmd _ = do
+	putStr "The " ++ cmd ++ " command doesn't exist"
+    usage
+
+main = do
+    (command:argList) <- getArgs
+    dispatch command argList
+
+usage :: IO ()
+usage = putStr "Usage: \n\
+\    add fileName todoItem \n\
+\    view fileName \n\
+\    remove fileName taskNumber \n"
+
+add :: [String] -> IO ()
+add [fileName, todoItem] = appendFile fileName (todoItem ++ "\n")
+add _ = usage
+
+view :: [String] -> IO ()
+view [fileName]= do
+    todoHandle <- openFile fileName ReadMode
+    contents <- hGetContents todoHandle
+    let tasks = lines contents
+        numberedTasks = unlines $ zipWith (\n t -> show n++" - "++t) [0..] tasks
+    putStr numberedTasks 
+view _ = usage
+
+remove :: [String] -> IO ()
+remove [fileName, numberString] = do
+    todoHandle <- openFile fileName ReadMode
+    contents <- hGetContents todoHandle
+    let taskNumber = read numberString
+        tasks = lines contents
+        filteredTasks = delete (tasks !! taskNumber) tasks
+    removeFile fileName
+    -- (tempName, tempHandle) <- openTempFile "." "new_todo"
+    bracketOnError (openTempFile "." "new_todo") 
+            (\(name, handle) -> do
+            hClose handle
+            removeFile name)
+            (\(name, handle) -> do
+            hPutStr handle $ unlines filteredTasks
+            renameFile name fileName)
+remove _ = usage
+```
+### Random numbers
+
+Because of referential transparency (if a function is given the same parameters
+twice, it must output the same value), random numbers are tricky in haskell.
+
+Function to deal with random numbers are found in `System.Random`. This is 
+installed with `cabal install random --lib`
+
+The `random` function takes a source of randomness and returns a random value 
+and a source of randomness. `RandomGen` is a type class for types that can act
+as a source of randomness, and `Random` for those types whose values can be 
+random. A number can be random, while a function not.
+```haskell
+random :: (Random a, RandomGen g) => g -> (a, g)
+```
+Manually make a standard generator with `mkStdGen`, which returns a `StdGen` 
+given an integer seed.
+```haskell
+ghci> random (mkStdGen 100) :: (Int, StdGen)
+(9216477508314497915,StdGen {unStdGen = SMGen 712633246999323047 2532601429470541
+125})
+ghci> random (mkStdGen 123) :: (Float, StdGen)
+(0.17785579,StdGen {unStdGen = SMGen 3794253433779795923 13032462758197477675})
+```
+Using the returned generator, we can use random multiple types without creating
+more than one standard generator
+```haskell
+threeCoins :: StdGen -> (Bool, Bool, Bool)
+threeCoins gen = 
+    let (a, newGen1) = random gen
+        (b, newGen2) = random newGen1
+        (c, _) = random newGen2
+    in (a,b,c)
+```
+For this common use case, we have the `randoms` function, which chains the
+calls of `random` infinitely.
+
+`randomR` is like random, but the first argument is tuple of two `Random` 
+instances, which set the minimum and maximum values of the function.
+
+With `getStdGen`, haskell asks the OS for the _global generator_.
+
+Calling `newStdGen` will change the _global generator_ and return the new one,
+unlinke `getStdGen` which will keep returning the same _global generator_ if it
+is called multiple times.
+
+### `ByteStrings`
+
+Lists in haskell are lazy by default. The laziness works by only providing the 
+elements of the list as they are needed. The deferred computation of the next
+list is called a _thunk_. 
+
+Working with _thunks_ sometimes can be bothersome (For example, when 
+manipulating large files), so bytestrings come to save the day.
+
+There are two types:
+ * Strict   
+   Found in `Data.ByteString`.  
+   No laziness whatsoever, a literal concatenation of bytes.
+ * Lazy
+   Found in `Data.ByteString.Lazy`
+   Somewhat lazy. Load strictly the first 64KB, lazily the rest.  
+   _These 64KBs are called a chunk_
+
+Both libraries introduce bytestrings as the type `ByteString`, and provide 
+similar functions to `Data.List`, but with `ByteString` instead of `[a]` and
+`Word8` instead of `a`.
+
+`Word8` corresponds to an unsigned 8-bit integer (ASCII character).
+
+The `:` equivalent for `ByteString`s is `cons`.
+
+The `[]` equivalent for `ByteString`s is `Empty`.
+
+`toChunks` transforms a lazy `ByteString` into a strict one.
+
+`fromChunks` transforms a strict `ByteString` into a lazy one.
+
+In `Data.ByteStrings` and `Data.ByteString.Lazy` both also have functions whose
+equivalent can be found in `System.IO` for lists.
+
