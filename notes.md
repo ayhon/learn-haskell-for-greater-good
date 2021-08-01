@@ -426,10 +426,10 @@ predicates. It basically works as an if statement
 ```haskell
 bmiTell :: Double -> String
 bmiTell bm
-	| bmi <= 18.5 = "You're underweight, eat more!"
-	| bmi <= 25.0 = "Looking good!"
-	| bmi <= 30.0 = "You're overweight. Let's work out together!"
-	| otherwise = "You're obese. Go see a doctor!"
+    | bmi <= 18.5 = "You're underweight, eat more!"
+    | bmi <= 25.0 = "Looking good!"
+    | bmi <= 30.0 = "You're overweight. Let's work out together!"
+    | otherwise = "You're obese. Go see a doctor!"
 ```
 Guard must be indented by at least one space
 
@@ -442,22 +442,22 @@ avoid calculating a certain value multiple times
 ```haskell
 bmiTell :: Double -> Double -> String
 bmiTell weight height
-	| bmi <= skinny = "You're underweight, eat more!"
-	| bmi <= normal = "Looking good!"
-	| bmi <= fat    = "You're overweight. Let's work out together!"
-	| otherwise     = "You're obese. Go see a doctor!"
-	where bmi = weight / height^2
-		  skinny = 18.5
-		  normal = 25.0
-		  fat = 30.0
+    | bmi <= skinny = "You're underweight, eat more!"
+    | bmi <= normal = "Looking good!"
+    | bmi <= fat    = "You're overweight. Let's work out together!"
+    | otherwise     = "You're obese. Go see a doctor!"
+    where bmi = weight / height^2
+          skinny = 18.5
+          normal = 25.0
+          fat = 30.0
 ```
 
 You can pattern match in the `where` clause
 ```haskell
 initials :: String -> String -> String
 initials firstname lastname = [f] ++ ". " ++ [l] ++ "."
-	where (f:_) = firstname
-		  (l:_) = lastname
+    where (f:_) = firstname
+          (l:_) = lastname
 ```
 
 Functions can also be defined in `where` blocks
@@ -468,9 +468,9 @@ The `let` expressions take the form of `let <bindings> in <expression>`
 ```haskell
 cylinder_area :: Double -> Double -> Double
 cylinder_area r h = 
-	let sideArea = 2 * pi * r * h
-		topArea = pi * r^2
-	in  sideArea + 2 * topArea
+    let sideArea = 2 * pi * r * h
+        topArea = pi * r^2
+    in  sideArea + 2 * topArea
 ```
 The difference between the `let` expressions and `where` blocks are that `let`
 expressions are expressions, which means that they can be used outside of a 
@@ -494,7 +494,7 @@ Basically, like a `switch` case on other languages
 case <expression> of <pattern> -> <result>
                      <pattern> -> <result>
                      <pattern> -> <result>
-					 ...
+                     ...
 ```
 The first pattern that matches the expression is used
 ```haskell
@@ -532,10 +532,10 @@ replicate' n x = x:replicate (n-1) x
 take' :: Int -> [a] -> [a]
 take' n ls
     | n < 0          = error "n can't be negative"
-	| n > length ls  = error "n is too large" -- Se raya si ls es infinita
-	| n == 0         = []
-	| otherwise      = first:take' (n-1) rest
-	where (first:rest) = ls
+    | n > length ls  = error "n is too large" -- Se raya si ls es infinita
+    | n == 0         = []
+    | otherwise      = first:take' (n-1) rest
+    where (first:rest) = ls
 ```
 ```haskell
 reverse' :: [a] -> [a]
@@ -562,7 +562,7 @@ quicksort' :: [a] -> [a]
 quicksort' [] = []
 quicksort' (pivot:rest) = quicksort' smallerOrEqual ++ pivot ++ quicksort' greater
     where smallerOrEqual = [x | x <- rest, x <= pivot]
-	      greater        = [x | x <- rest, x >  pivot]
+          greater        = [x | x <- rest, x >  pivot]
 ```
 
 ## Chapter 4 - Higher-order functions
@@ -654,7 +654,7 @@ filter' p (x:xs)
 > length_collatz 1 = 1
 > -- length_collatz x
 >     -- | x `mod` 2 == 0 = length_collatz (x/2) + 1
-> 	-- | otherwise      = length_collatz (3*x+1) + 1
+>     -- | otherwise      = length_collatz (3*x+1) + 1
 > length_collatz x = 
 >     length_collatz (if x `mod`2 == 0 then (x/2) else (3*x + 1)) + 1
 > length [x | x <- [1..100], length_collatz x > 15]
@@ -1284,8 +1284,8 @@ We can glue several `IO` actions into one using the `do` syntax.
 ```haskell
 main = do
     putStrLn "Hello, What's your name?"
-	name <- getLine
-	putStrLn ("Hey " ++ name ++ ", you rock!")
+    name <- getLine
+    putStrLn ("Hey " ++ name ++ ", you rock!")
 ```
 `getLine` is a `IO` action that yields a string. The `<-` is an operator that
 means "perform the action `<rhs>` and bind the result to `<lhs>`".
@@ -1303,11 +1303,11 @@ reverseWords = unwords . map reverse . words
 
 main = do
        line <- getLine
-	   if (null line)
-	       then return ()
-		   else do
-		       putStrLn $ reverseWords line
-			   main
+       if (null line)
+           then return ()
+           else do
+               putStrLn $ reverseWords line
+               main
 ```
 The `return` function makes a `IO` action out of a pure value. It basically 
 boxes the value.
@@ -1362,8 +1362,8 @@ We could say that `<-` and `return` are opposites
    -- EXAMPLE
    main = do
        input <- getLine
-	   when (input == "SWORDFISH") $ do
-	       putStrLn input
+       when (input == "SWORDFISH") $ do
+           putStrLn input
    ```
 
  * `sequence`
@@ -1391,16 +1391,16 @@ We could say that `<-` and `return` are opposites
  * `forever` From `Control.Monad`
     ```haskell
     forever :: Applicative f => f a -> f b
-	```
-	Takes an `IO` action and returns an `IO` action that repeats the `IO` action
-	forever
-	```haskell
-	-- EXAMPLE
-	main = forever $ do
-	    putStr "Give me some input: "
-		l <- getLine
-		putStrLn $ map toUpper l
-	```
+    ```
+    Takes an `IO` action and returns an `IO` action that repeats the `IO` action
+    forever
+    ```haskell
+    -- EXAMPLE
+    main = forever $ do
+        putStr "Give me some input: "
+        l <- getLine
+        putStrLn $ map toUpper l
+    ```
 
  * `forM` 
    ```haskell
@@ -1408,15 +1408,15 @@ We could say that `<-` and `return` are opposites
    ```
    Like `mapM` but with its arguments flipped. This can sometimes be useful.
    ```haskell
-	-- EXAMPLE
-	main = do
-	    colors <- forM [1,2,3,4] (\a -> do
-		    putStrLn $ "Which color do you associate with the number " 
-			    ++ show a ++ "?"
-		    color <- getLine
-			return color)
-		putStrLn "The colors that you associate with 1, 2, 3 and 4 are: "
-		mapM putStrLn colors
+    -- EXAMPLE
+    main = do
+        colors <- forM [1,2,3,4] (\a -> do
+            putStrLn $ "Which color do you associate with the number " 
+                ++ show a ++ "?"
+            color <- getLine
+            return color)
+        putStrLn "The colors that you associate with 1, 2, 3 and 4 are: "
+        mapM putStrLn colors
    ```
 
 To sum up, `IO` actions are types like any other in haskell, where the only 
@@ -1532,7 +1532,7 @@ dispatch "add" = add
 dispatch "view" = view
 dispatch "remove" = remove
 dispatch cmd _ = do
-	putStr "The " ++ cmd ++ " command doesn't exist"
+    putStr "The " ++ cmd ++ " command doesn't exist"
     usage
 
 main = do
@@ -1656,4 +1656,135 @@ The `[]` equivalent for `ByteString`s is `Empty`.
 
 In `Data.ByteStrings` and `Data.ByteString.Lazy` both also have functions whose
 equivalent can be found in `System.IO` for lists.
+
+## Chapter 10 - Functionally solving problems
+
+### Writing an RPN function
+
+Takes an expression written in postfix notation and evaluates it.
+
+#### My attempt
+```haskell
+import Data.Char
+
+rpn :: String -> Double
+rpn "" = 0
+rpn (' ':rest) = rpn rest
+rpn expr = foldl expre (\acc x ->
+    if x `elem` "+/*-"
+    then 
+        let 
+            operation = case x of
+                            '+' -> (+)
+                            '*' -> (*)
+                            '-' -> (-)
+                            '/' -> (/)
+            (first:rest) = acc
+            (second:rest') = rest
+        in (operation first second):rest'
+    else (ord x - ord '0'):acc
+) []
+
+```
+#### Book's solution
+```haskell
+solveRPN :: String -> Double
+solveRPN expression = head . foldl foldingFunction [] . words expression
+    where foldingFunction (x:y:ys) "*" = (y*x):ys
+          foldingFunction (x:y:ys) "+" = (y+x):ys
+          foldingFunction (x:y:ys) "-" = (y-x):ys
+          foldingFunction xs numberString = read numberString:xs
+```
+
+### Shortest path between two points
+
+Two roads connect two sides, with intersections that permit you to cross from
+one road to the other. Each continuous piece of road has a cost assigned to it.
+Given these costs, get the shortest path from one side to the other
+
+#### My attempt
+```haskell
+getCosts :: IO [Int]
+getCosts = do
+    contents <- getContents
+    let costs = map (\n -> read n) $ words contents
+    return costs
+
+data UpOrDown = Up | Down
+
+shortestPath :: [Int] -> UpOrDown -> Int
+shortestPath [] _ = 0
+shortestPath (up:_:change:rest) Up = choseUp `min` choseDown
+    where choseUp = shortestPath rest Up + up
+          choseDown = shortestPath rest Down + up + change
+shortestPath (_:down:change:rest) Down = choseUp `min` choseDown
+    where choseUp = shortestPath rest Up + down + change
+          choseDown = shortestPath rest Down + down
+
+findShortestPath :: [Int] -> Int
+findShortestPath costs = startUp `min` startDown
+    where startUp = shortestsPath costs Up
+          startDown = shortestPath costs Down
+
+main = do
+    costs <- getCosts
+    putStrLn $ "The shortest path is " ++ show $ findShortestPath costs
+```
+#### Book's solution
+```haskell
+import Data.List
+
+data Section = Section {getA :: Int, getB :: Int, getC :: Int }
+    deriving (Show)
+
+type RoadSystem = [Section]
+
+heathrowToLondon :: RoadSystem
+heathrowToLondon = [ Section 50 10 30
+                   , Section 5 80 20
+                   , Section 40 2 25
+                   , Section 10 8 0
+                   ]
+
+data Label = A | B | C deriving (Show)
+type Path = [(Label, Int)]
+
+roadStep :: (Path, Path) -> Section -> (Path, Path)
+roadStep (pathA, pathB) (Section a b c) = 
+    let timeA = sum (map snd pathA)
+        timeB = sum (map snd pathB)
+        forwardTimeToA = timeA + a
+        crossTimeToA = timeB + b + c
+        forwardTimeToB = timeB + b
+        crossTimeToB = timeA + a + c
+        newPathToA = if forwardTimeToA <= crossTimeToA
+                     then (A, a):pathA
+                     else (C, c):(B, b):pathB
+        newPathToB = if forwardTimeToB <= crossTimeToB
+                     then (B, b):pathB
+                     else (C, c):(A, a):pathA
+    in (newPathToA, newPathToB)
+
+optimalPath :: RoadSystem -> Path
+optimalPath roadSystem = 
+    let (bestAPath, bestBPath) = foldl roadStep ([], []) roadSystem
+    in if sum (map snd bestAPath) <= sum (map snd bestBPath)
+       then reverse bestAPath
+       else reverse bestBPath
+
+groupsOf :: Int -> [a] -> [[a]]
+groupsOf 0 _ = []
+groupsOf _ [] = []
+groupsOf n ls = take n ls : groupsOf n (drop n ls)
+
+main = do
+    contents <- getContents
+    let threes = groupsOf 3 (map read $ lines contents)
+        roadSystem = map (\[a,b,c] -> Section a b c) threes
+        path = optimalPath roadSystem
+        pathString = concat $ map (show . fst) path
+        pathTime = sum $ map snd path
+    putStrLn $ "The best path to take is: " ++ pathString
+    putStrLn $ "Time taken: " ++ show pathTime
+```
 
